@@ -1,253 +1,228 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weather</title>
+  <title>Flash Browser</title>
   <style>
     body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #4facfe, #00f2fe);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      padding: 1rem;
+      margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      height: 100vh; display: flex; flex-direction: column;
     }
-    .container {
-      background: rgba(255, 255, 255, 0.15);
-      padding: 2rem;
-      border-radius: 20px;
-      text-align: center;
-      max-width: 420px;
-      width: 100%;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 0 15px rgba(0,0,0,0.25);
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
+    header {
+      background: #0078d7; color: white;
+      padding: 10px 15px; display: flex; align-items: center;
     }
     h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
+      margin: 0; font-size: 1.5rem; flex: 1;
     }
-    input {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      width: 60%;
-      border: none;
-      border-radius: 10px;
-      outline: none;
+    #newTabBtn {
+      background: #005a9e; color: white; border: none;
+      padding: 6px 10px; border-radius: 4px; cursor: pointer;
     }
-    button {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 10px;
-      margin-left: 10px;
-      cursor: pointer;
-      background: rgba(255, 255, 255, 0.3);
-      color: white;
-      transition: background 0.3s ease;
+    #tabs {
+      display: flex; background: #e0e0e0; overflow-x: auto;
     }
-    button:hover {
-      background: rgba(255,255,255,0.5);
+    .tab-btn {
+      padding: 6px 12px; border: none; background: #ddd;
+      cursor: pointer; margin-right: 5px; border-radius: 4px 4px 0 0;
     }
-    .buttons {
-      margin-bottom: 1rem;
+    .tab-btn.active {
+      background: #fff; font-weight: bold;
+    }
+    #tabContainer {
+      flex: 1; position: relative;
+    }
+    .tab-content {
+      display: none; flex-direction: column;
+      height: 100%; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    }
+    .tab-content.active {
       display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
     }
-    .info {
-      margin-top: 1rem;
-      flex-grow: 0;
+    .tab-toolbar {
+      display: flex; padding: 5px; background: #f8f8f8;
     }
-    .info img {
-      width: 80px;
-      height: 80px;
+    .tab-toolbar input {
+      flex: 1; padding: 6px; margin-right: 5px; border-radius: 4px; border: 1px solid #ccc;
     }
-    .forecast {
-      margin-top: 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 0.9rem;
-      flex-wrap: wrap;
-      flex-grow: 1;
-      overflow-y: auto;
+    .tab-toolbar button {
+      padding: 6px 10px; margin-left: 5px;
     }
-    .day {
-      background: rgba(255,255,255,0.2);
-      border-radius: 15px;
-      padding: 0.8rem;
-      flex: 1;
-      min-width: 100px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.15);
-    }
-    .day img {
-      width: 50px;
-      height: 50px;
-      margin-bottom: 0.3rem;
-    }
-    .error {
-      color: yellow;
-      margin-top: 1rem;
-      min-height: 1.2em;
+    .tab-iframe {
+      flex: 1; border: none;
     }
     footer {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-      color: rgba(255,255,255,0.6);
-      user-select: none;
+      text-align: center; background: #0078d7; color: white; padding: 8px;
     }
   </style>
+  <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>🌦 Weather App</h1>
-    <div class="buttons">
-      <input type="text" id="city" placeholder="Enter city name" />
-      <button onclick="getWeatherFromInput()">Search</button>
-      <button onclick="refreshWeather()">Refresh</button>
-    </div>
-    <div class="error" id="error"></div>
-    <div class="info" id="info"></div>
-    <div class="forecast" id="forecast"></div>
-  </div>
+  <header>
+    <h1>Flash Browser</h1>
+    <button id="newTabBtn">+ New Tab</button>
+  </header>
+
+  <div id="tabs"></div>
+  <div id="tabContainer"></div>
+
   <footer>Developed by Haris</footer>
 
   <script>
-    const apiKey = "61a32ca964644288add194937231807"; // Replace with your WeatherAPI key
-    const cityInput = document.getElementById('city');
-    const infoDiv = document.getElementById('info');
-    const errorDiv = document.getElementById('error');
-    const forecastDiv = document.getElementById('forecast');
+    let tabCount = 0;
+    let currentTabId = null;
 
-    // Format date to weekday name
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    function normalizeUrl(inputUrl) {
+      inputUrl = inputUrl.trim();
+      if (!inputUrl) return null;
+      if (/^(https?:\/\/)/i.test(inputUrl)) return inputUrl;
+      if (/^www\./i.test(inputUrl)) return 'https://' + inputUrl;
+      if (/^[\w-]+\.[a-z]{2,}$/i.test(inputUrl)) return 'https://www.' + inputUrl;
+      return 'https://' + inputUrl;
     }
 
-    async function getWeather(cityName) {
-      errorDiv.textContent = '';
-      infoDiv.innerHTML = '';
-      forecastDiv.innerHTML = '';
-      if (!cityName) {
-        errorDiv.textContent = "Please enter a city name.";
-        return;
+    function createTab(url = '') {
+      tabCount++;
+      const tabId = `tab${tabCount}`;
+
+      // Create tab button
+      const tabButton = document.createElement('button');
+      tabButton.className = 'tab-btn';
+      tabButton.id = `${tabId}-btn`;
+      tabButton.textContent = `Tab ${tabCount}`;
+      tabButton.onclick = () => activateTab(tabId);
+      document.getElementById('tabs').appendChild(tabButton);
+
+      // Create tab content
+      const tabContent = document.createElement('div');
+      tabContent.className = 'tab-content';
+      tabContent.id = tabId;
+
+      // Toolbar
+      const toolbar = document.createElement('div');
+      toolbar.className = 'tab-toolbar';
+
+      const input = document.createElement('input');
+      input.placeholder = 'Enter URL, e.g. google.com';
+      input.onkeydown = e => {
+        if (e.key === 'Enter') loadInTab(tabId, input.value);
+      };
+
+      const goBtn = document.createElement('button');
+      goBtn.textContent = 'Go';
+      goBtn.onclick = () => loadInTab(tabId, input.value);
+
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '❌';
+      closeBtn.onclick = () => closeTab(tabId);
+
+      toolbar.append(input, goBtn, closeBtn);
+
+      // iFrame
+      const iframe = document.createElement('iframe');
+      iframe.className = 'tab-iframe';
+
+      tabContent.append(toolbar, iframe);
+      document.getElementById('tabContainer').appendChild(tabContent);
+
+      activateTab(tabId);
+
+      if (url) {
+        input.value = url;
+        loadInTab(tabId, url);
       }
+    }
+
+    function activateTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      const button = document.getElementById(`${tabId}-btn`);
+      const content = document.getElementById(tabId);
+      if (button && content) {
+        button.classList.add('active');
+        content.classList.add('active');
+        currentTabId = tabId;
+      }
+    }
+
+    function closeTab(tabId) {
+      const btn = document.getElementById(`${tabId}-btn`);
+      const tab = document.getElementById(tabId);
+      if (btn) btn.remove();
+      if (tab) tab.remove();
+      if (currentTabId === tabId) {
+        const remaining = document.querySelectorAll('.tab-btn');
+        if (remaining.length > 0) remaining[0].click();
+        else currentTabId = null;
+      }
+    }
+
+    async function loadInTab(tabId, urlInput) {
+      const normalized = normalizeUrl(urlInput);
+      if (!normalized) return;
+
+      const iframe = document.querySelector(`#${tabId} iframe`);
+      const input = document.querySelector(`#${tabId} input`);
+
+      input.disabled = true;
+      iframe.srcdoc = `<p style="padding:20px;">Loading <span style="font-size:20px;">⏳</span>...</p>`;
+
       try {
-        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${cityName}&days=3&aqi=no&alerts=no`);
-        const data = await res.json();
-
-        if (data.error) {
-          errorDiv.textContent = data.error.message;
-          return;
-        }
-
-        localStorage.setItem('lastCity', cityName); // Save city
-
-        const { location, current, forecast } = data;
-
-        infoDiv.innerHTML = `
-          <h2>${location.name}, ${location.country}</h2>
-          <img src="https:${current.condition.icon}" alt="${current.condition.text}" />
-          <p><strong>${current.condition.text}</strong></p>
-          <p>🌡️ ${current.temp_c} °C | 💨 ${current.wind_kph} kph | 💧 ${current.humidity}%</p>
-          <p>🕒 Local Time: ${location.localtime}</p>
-        `;
-
-        // 3-day forecast
-        forecast.forecastday.forEach(day => {
-          forecastDiv.innerHTML += `
-            <div class="day">
-              <div>${formatDate(day.date)}</div>
-              <img src="https:${day.day.condition.icon}" alt="${day.day.condition.text}" />
-              <div><strong>${day.day.condition.text}</strong></div>
-              <div>Max: ${day.day.maxtemp_c} °C</div>
-              <div>Min: ${day.day.mintemp_c} °C</div>
-              <div>💧 Humidity: ${day.day.avghumidity}%</div>
-            </div>
-          `;
-        });
-
+        const response = await puter.net.fetch(normalized);
+        const body = await response.text();
+        const finalHTML = injectLinkHandler(body, normalized);
+        iframe.srcdoc = finalHTML;
+        input.value = normalized;
       } catch (err) {
-        errorDiv.textContent = "Failed to fetch weather data.";
-        console.error(err);
+        iframe.srcdoc = `<p style="padding:20px;color:red;">Error loading page: ${err.message}</p>`;
+      } finally {
+        input.disabled = false;
       }
     }
 
-    // Called when Search button clicked
-    function getWeatherFromInput() {
-      const city = cityInput.value.trim();
-      getWeather(city);
-    }
-
-    // Refresh button handler
-    function refreshWeather() {
-      const city = cityInput.value.trim();
-      if (!city) {
-        errorDiv.textContent = "No city to refresh. Please search a city first.";
-        return;
-      }
-      getWeather(city);
-    }
-
-    // Try to get user location on page load
-    async function loadByLocation() {
-      errorDiv.textContent = '';
-      infoDiv.innerHTML = '';
-      forecastDiv.innerHTML = '';
-
-      // If city saved in localStorage, load that first
-      const savedCity = localStorage.getItem('lastCity');
-      if (savedCity) {
-        cityInput.value = savedCity;
-        getWeather(savedCity);
-        return;
+    function injectLinkHandler(html, baseUrl) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      let base = doc.querySelector('base');
+      if (!base) {
+        base = document.createElement('base');
+        base.href = baseUrl;
+        doc.head.prepend(base);
+      } else {
+        base.href = baseUrl;
       }
 
-      if (!navigator.geolocation) {
-        errorDiv.textContent = "Geolocation is not supported by your browser.";
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(async position => {
-        try {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-
-          const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${lat},${lon}&days=3&aqi=no&alerts=no`);
-          const data = await res.json();
-
-          if (data.error) {
-            errorDiv.textContent = data.error.message;
-            return;
+      const script = document.createElement('script');
+      script.textContent = `
+        document.addEventListener('click', function(event) {
+          const link = event.target.closest('a');
+          if (link && link.href) {
+            event.preventDefault();
+            parent.postMessage({ type: 'navigate', url: link.href, tabId: '${currentTabId}' }, '*');
           }
+        }, true);
+      `;
+      doc.head.appendChild(script);
 
-          const { location } = data;
-          cityInput.value = location.name;
-          getWeather(location.name);
+      return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    }
 
-        } catch (err) {
-          errorDiv.textContent = "Failed to fetch weather for your location.";
-          console.error(err);
+    window.addEventListener('message', e => {
+      if (e.data && e.data.type === 'navigate') {
+        const tabId = e.data.tabId;
+        const url = normalizeUrl(e.data.url);
+        if (tabId && url) {
+          loadInTab(tabId, url);
         }
-      }, () => {
-        errorDiv.textContent = "Permission to access location denied.";
-      });
-    }
+      }
+    });
 
-    // On page load
-    window.onload = () => {
-      loadByLocation();
-    }
+    document.getElementById('newTabBtn').onclick = () => createTab();
+
+    // Open first tab by default
+    createTab();
   </script>
 </body>
 </html>
