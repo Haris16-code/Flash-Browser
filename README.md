@@ -1,5 +1,6 @@
 # Flash Browser
 **Flash Browser** is made in pure HTML CSS AND JAVASCRIPT so it run on any browser directly without any external dependency.
+
 **Flash Browser** is the first fully web-based browser ever made for the **Puter** platform – lightweight, elegant, and blazing fast.
 
 🌐 **Key Features:**
