@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      padding: 1rem;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2rem;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 15px rgba(0,0,0,0.25);
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    input {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      width: 60%;
+      border: none;
+      border-radius: 10px;
+      outline: none;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      margin-left: 10px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.3);
+      color: white;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: rgba(255,255,255,0.5);
+    }
+    .buttons {
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .info {
+      margin-top: 1rem;
+      flex-grow: 0;
+    }
+    .info img {
+      width: 80px;
+      height: 80px;
+    }
+    .forecast {
+      margin-top: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.9rem;
+      flex-wrap: wrap;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .day {
+      background: rgba(255,255,255,0.2);
+      border-radius: 15px;
+      padding: 0.8rem;
+      flex: 1;
+      min-width: 100px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.15);
+    }
+    .day img {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 0.3rem;
+    }
+    .error {
+      color: yellow;
+      margin-top: 1rem;
+      min-height: 1.2em;
+    }
+    footer {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.6);
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌦 Weather App</h1>
+    <div class="buttons">
+      <input type="text" id="city" placeholder="Enter city name" />
+      <button onclick="getWeatherFromInput()">Search</button>
+      <button onclick="refreshWeather()">Refresh</button>
+    </div>
+    <div class="error" id="error"></div>
+    <div class="info" id="info"></div>
+    <div class="forecast" id="forecast"></div>
+  </div>
+  <footer>Developed by Haris</footer>
+
+  <script>
+    const apiKey = "61a32ca964644288add194937231807"; // Replace with your WeatherAPI key
+    const cityInput = document.getElementById('city');
+    const infoDiv = document.getElementById('info');
+    const errorDiv = document.getElementById('error');
+    const forecastDiv = document.getElementById('forecast');
+
+    // Format date to weekday name
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    async function getWeather(cityName) {
+      errorDiv.textContent = '';
+      infoDiv.innerHTML = '';
+      forecastDiv.innerHTML = '';
+      if (!cityName) {
+        errorDiv.textContent = "Please enter a city name.";
+        return;
+      }
+      try {
+        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${cityName}&days=3&aqi=no&alerts=no`);
+        const data = await res.json();
+
+        if (data.error) {
+          errorDiv.textContent = data.error.message;
+          return;
+        }
+
+        localStorage.setItem('lastCity', cityName); // Save city
+
+        const { location, current, forecast } = data;
+
+        infoDiv.innerHTML = `
+          <h2>${location.name}, ${location.country}</h2>
+          <img src="https:${current.condition.icon}" alt="${current.condition.text}" />
+          <p><strong>${current.condition.text}</strong></p>
+          <p>🌡️ ${current.temp_c} °C | 💨 ${current.wind_kph} kph | 💧 ${current.humidity}%</p>
+          <p>🕒 Local Time: ${location.localtime}</p>
+        `;
+
+        // 3-day forecast
+        forecast.forecastday.forEach(day => {
+          forecastDiv.innerHTML += `
+            <div class="day">
+              <div>${formatDate(day.date)}</div>
+              <img src="https:${day.day.condition.icon}" alt="${day.day.condition.text}" />
+              <div><strong>${day.day.condition.text}</strong></div>
+              <div>Max: ${day.day.maxtemp_c} °C</div>
+              <div>Min: ${day.day.mintemp_c} °C</div>
+              <div>💧 Humidity: ${day.day.avghumidity}%</div>
+            </div>
+          `;
+        });
+
+      } catch (err) {
+        errorDiv.textContent = "Failed to fetch weather data.";
+        console.error(err);
+      }
+    }
+
+    // Called when Search button clicked
+    function getWeatherFromInput() {
+      const city = cityInput.value.trim();
+      getWeather(city);
+    }
+
+    // Refresh button handler
+    function refreshWeather() {
+      const city = cityInput.value.trim();
+      if (!city) {
+        errorDiv.textContent = "No city to refresh. Please search a city first.";
+        return;
+      }
+      getWeather(city);
+    }
+
+    // Try to get user location on page load
+    async function loadByLocation() {
+      errorDiv.textContent = '';
+      infoDiv.innerHTML = '';
+      forecastDiv.innerHTML = '';
+
+      // If city saved in localStorage, load that first
+      const savedCity = localStorage.getItem('lastCity');
+      if (savedCity) {
+        cityInput.value = savedCity;
+        getWeather(savedCity);
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        errorDiv.textContent = "Geolocation is not supported by your browser.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(async position => {
+        try {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${lat},${lon}&days=3&aqi=no&alerts=no`);
+          const data = await res.json();
+
+          if (data.error) {
+            errorDiv.textContent = data.error.message;
+            return;
+          }
+
+          const { location } = data;
+          cityInput.value = location.name;
+          getWeather(location.name);
+
+        } catch (err) {
+          errorDiv.textContent = "Failed to fetch weather for your location.";
+          console.error(err);
+        }
+      }, () => {
+        errorDiv.textContent = "Permission to access location denied.";
+      });
+    }
+
+    // On page load
+    window.onload = () => {
+      loadByLocation();
+    }
+  </script>
+</body>
+</html>
