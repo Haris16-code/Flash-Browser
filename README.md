@@ -1,7 +1,5 @@
 # Flash Browser
 
-![Flash Browser Screenshot.png](https://github.com/Haris16-code/Flash-Browser/blob/main/Flash%20Browser%20Screenshot.png?raw=true)
-
 **Flash Browser** is made in pure HTML CSS AND JAVASCRIPT so it run on any browser directly without any external dependency.
 
 **Flash Browser** is the first fully web-based browser ever made for the **Puter** platform – lightweight, elegant, and blazing fast.
@@ -17,3 +15,4 @@
 - 👨‍💻 **Developed by Haris** – Built with passion for the Puter ecosystem.
 
 🧭 Whether you're exploring the web, testing ideas, or just want a fast, easy-to-use browser – **Flash Browser** gives you the ultimate freedom inside **Puter**.
+![Flash Browser Screenshot.png](https://github.com/Haris16-code/Flash-Browser/blob/main/Flash%20Browser%20Screenshot.png?raw=true)
