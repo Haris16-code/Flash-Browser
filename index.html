@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Flash Browser</title>
+  <script src="https://js.puter.com/v2/"></script>
+  <style>
+    /* General Body and Layout */
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      background-color: #f0f2f5;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Prevent double scrollbars on body */
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Header */
+    header {
+      background-color: #0078d4;
+      color: white;
+      padding: 8px 12px; /* Slightly reduced padding for mobile */
+      display: flex;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      transition: background-color 0.3s;
+      position: relative;
+      flex-shrink: 0; /* Prevent header from shrinking */
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.2rem; /* Adjusted for space */
+      font-weight: 600;
+      flex-grow: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    header .header-buttons { /* Container for buttons */
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    #historyBtn, #bookmarksBtn, #newTabBtn, #openSettingsBtn {
+      background-color: #005a9e;
+      color: white;
+      border: none;
+      padding: 7px 10px; /* Adjusted padding */
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem; /* Adjusted font size */
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+      margin-left: 8px; /* Adjusted margin */
+      line-height: 1.2; /* Better text centering */
+    }
+    #historyBtn { margin-left: 0; }
+
+
+    #historyBtn:hover, #bookmarksBtn:hover, #newTabBtn:hover, #openSettingsBtn:hover {
+      background-color: #004578;
+    }
+
+    /* Generic Modal Styles */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); display: none;
+      justify-content: center; align-items: center; z-index: 1000;
+      transition: opacity 0.2s ease-out; opacity: 0;
+    }
+    .modal-overlay.active { display: flex; opacity: 1; }
+    .modal-content {
+      background-color: #fff; padding: 0;
+      border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      display: flex; flex-direction: column;
+      transition: background-color 0.3s, color 0.3s, transform 0.2s ease-out;
+      width: 90%; max-height: 85vh; /* Adjusted max-height */
+      transform: scale(0.95);
+    }
+    .modal-overlay.active .modal-content {
+        transform: scale(1);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #eee; padding: 12px 20px; /* Adjusted padding */
+      flex-shrink: 0; transition: border-color 0.3s;
+    }
+    .modal-header h2 { margin: 0; font-size: 1.3rem; color: #333; transition: color 0.3s; } /* Adjusted font size */
+    .modal-close-btn {
+      background: none; border: none; font-size: 1.6rem; cursor: pointer; /* Adjusted font size */
+      color: #888; transition: color 0.3s; padding: 0 5px;
+    }
+    .modal-close-btn:hover { color: #333; }
+    .modal-body {
+        padding: 15px 20px; /* Adjusted padding */
+        flex-grow: 1; overflow-y: auto;
+    }
+    .modal-footer {
+        display: flex; justify-content: flex-end;
+        padding: 12px 20px; border-top: 1px solid #eee;
+        background-color: #f9f9f9; border-radius: 0 0 8px 8px;
+        flex-shrink: 0;
+    }
+    .modal-footer button {
+        background-color: #d9534f; color: white; border: none;
+        padding: 7px 12px; border-radius: 4px; cursor: pointer; /* Adjusted padding */
+        font-size: 0.85rem; transition: background-color 0.2s ease; /* Adjusted font size */
+    }
+    .modal-footer button:hover { background-color: #c9302c; }
+    .modal-footer button.primary-action { /* For OK buttons */
+        background-color: #0078d4;
+    }
+    .modal-footer button.primary-action:hover {
+        background-color: #005a9e;
+    }
+
+
+    /* Settings Modal Specifics */
+    #settingsModal .modal-content { max-width: 380px; } /* Adjusted max-width */
+    #settingsModal .modal-body { padding-top: 15px; }
+    #settingsModal .setting-item { margin-bottom: 15px; }
+    #settingsModal .setting-item label { display: block; margin-bottom: 6px; font-weight: 500; color: #555; font-size: 0.9rem; transition: color 0.3s; }
+    #settingsModal .setting-item select {
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+      font-size: 0.9rem; box-sizing: border-box;
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    }
+    #settingsModal .setting-item .small-settings-btn {
+        padding: 4px 8px;
+        font-size: 0.8em;
+        margin-left: 8px;
+        background-color: #e1e4e8;
+        color: #24292e;
+        border: 1px solid #d1d5da;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #settingsModal .setting-item .small-settings-btn:hover {
+        background-color: #d1d5da;
+    }
+    #currentHomepageDisplay {
+        flex-grow: 1;
+        font-size: 0.85em;
+        color: #555;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-right: 8px;
+        padding: 4px 0;
+        display: inline-block;
+        max-width: 180px; /* Adjust as needed */
+        vertical-align: middle;
+    }
+    
+    /* Homepage Modal */
+    #homepageModal .modal-content { max-width: 420px; }
+    #homepageModal #homepageUrlInput {
+      width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 10px;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;
+    }
+
+
+    /* Bookmarks Modal Specifics */
+    #bookmarksModal .modal-content { max-width: 500px; } /* Adjusted max-width */
+    #bookmarksList { list-style: none; padding: 0; margin: 0; }
+    #bookmarksList li {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0px; border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.2s;
+    }
+    #bookmarksList li:last-child { border-bottom: none; }
+    #bookmarksList li:hover { background-color: #f0f2f5; margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
+    #bookmarksList .bookmark-title-url-container { display: flex; flex-direction: column; overflow: hidden; flex-grow: 1; margin-right: 8px; }
+    #bookmarksList .bookmark-title { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #bookmarksList .bookmark-url { font-size: 0.7rem; color: #777; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #bookmarksList .bookmark-delete-btn { background: transparent; border: none; color: #cc0000; font-size: 1rem; cursor: pointer; padding: 2px 5px; line-height: 1; flex-shrink: 0; }
+    #bookmarksList .bookmark-delete-btn:hover { color: #ff0000; font-weight: bold; }
+    #bookmarksList .no-bookmarks { padding: 15px 0; text-align: center; color: #777; font-style: italic; cursor: default; font-size: 0.9rem; }
+    #bookmarksList .no-bookmarks:hover { background-color: transparent; margin: 0; padding: 15px 0; }
+
+    /* History Modal Specifics */
+    #historyModal .modal-content { max-width: 650px; } /* Adjusted max-width */
+    .history-group h3 {
+        font-size: 0.95rem; color: #0078d4; margin-top: 15px; margin-bottom: 6px;
+        padding-bottom: 4px; border-bottom: 1px solid #e0e0e0;
+    }
+    .history-group:first-child h3 { margin-top: 0; }
+    #historyListContainer ul { list-style: none; padding: 0; margin: 0; }
+    #historyListContainer li {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 7px 0px; border-bottom: 1px solid #f0f0f0; cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #historyListContainer li:last-child { border-bottom: none; }
+    #historyListContainer li:hover { background-color: #f0f2f5; margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
+    #historyListContainer .history-item-details { display: flex; flex-direction: column; overflow: hidden; flex-grow: 1; margin-right: 8px; }
+    #historyListContainer .history-item-title { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #historyListContainer .history-item-url { font-size: 0.7rem; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    #historyListContainer .history-item-time { font-size: 0.65rem; color: #999; flex-shrink: 0; margin-right: 8px; }
+    #historyListContainer .history-item-delete-btn { background: transparent; border: none; color: #cc0000; font-size: 0.9rem; cursor: pointer; padding: 2px 5px; line-height: 1; flex-shrink: 0; }
+    #historyListContainer .history-item-delete-btn:hover { color: #ff0000; font-weight: bold; }
+    #historyListContainer .no-history { padding: 15px 0; text-align: center; color: #777; font-style: italic; cursor: default; font-size: 0.9rem; }
+    #historyListContainer .no-history:hover { background-color: transparent; margin: 0; padding: 15px 0; }
+
+    /* Tabs Bar */
+    #tabs {
+      display: flex; background-color: #e1e4e8; padding: 5px 5px 0 5px;
+      overflow-x: auto; flex-shrink: 0; box-shadow: inset 0 -1px 0 #ccc;
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .tab-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 8px; border: 1px solid #ccc; border-bottom: none;
+      background-color: #f6f8fa; cursor: pointer; margin-right: 3px;
+      border-radius: 4px 4px 0 0; font-size: 0.8rem; min-width: 80px; max-width: 150px;
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s;
+      position: relative; color: #333;
+    }
+    .tab-btn:hover { background-color: #e9ecef; }
+    .tab-btn.active {
+      background-color: #ffffff; color: #005a9e; font-weight: 600; border-color: #ccc;
+      border-bottom: 1px solid #ffffff; z-index: 2; margin-bottom: -1px;
+    }
+    .tab-title {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-right: 6px; flex-grow: 1;
+    }
+    .tab-close-button {
+      background: transparent; border: none; color: #586069; font-size: 1rem;
+      font-weight: bold; padding: 0 3px; line-height: 1; border-radius: 3px;
+      cursor: pointer; transition: color 0.2s, background-color 0.2s;
+    }
+    .tab-close-button:hover { color: #333; background-color: #e1e4e8; }
+
+    /* Tab Content Area */
+    #tabContainer {
+      flex-grow: 1; position: relative; background-color: #ffffff;
+      transition: background-color 0.3s;
+    }
+    .tab-content {
+      display: none; flex-direction: column; height: 100%; background-color: #ffffff;
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      transition: background-color 0.3s;
+    }
+    .tab-content.active { display: flex; z-index: 1; }
+
+    /* Toolbar within each Tab */
+    .tab-toolbar {
+      display: flex; align-items: center; padding: 5px 6px;
+      background-color: #f6f8fa; border-bottom: 1px solid #e1e4e8;
+      flex-shrink: 0; transition: background-color 0.3s, border-color 0.3s;
+    }
+    .tab-toolbar .nav-button, .tab-toolbar .go-button, .tab-toolbar .bookmark-button {
+      background-color: #eff3f6; border: 1px solid #d1d5da; color: #24292e;
+      padding: 4px 7px; margin-right: 3px; border-radius: 3px; cursor: pointer;
+      font-size: 0.85rem;
+      transition: background-color 0.2s ease, border-color 0.2s, color 0.2s;
+    }
+    .tab-toolbar .bookmark-button { font-size: 1rem; padding: 3px 6px; }
+    .tab-toolbar .nav-button:hover, .tab-toolbar .go-button:hover, .tab-toolbar .bookmark-button:hover {
+      background-color: #e1e4e8;
+    }
+    .tab-toolbar .nav-button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .tab-toolbar input[type="text"] {
+      flex-grow: 1; padding: 6px 8px; margin-right: 4px; border-radius: 3px;
+      border: 1px solid #d1d5da; font-size: 0.85rem;
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    }
+    .tab-toolbar input[type="text"]:focus {
+      border-color: #0078d4; box-shadow: 0 0 0 1.5px rgba(0, 120, 212, 0.2); outline: none;
+    }
+
+    /* Iframe */
+    .tab-iframe { flex-grow: 1; border: none; }
+
+    /* Footer */
+    footer {
+      background-color: #0078d4; color: white; padding: 6px 12px; text-align: center;
+      font-size: 0.75rem; flex-shrink: 0; transition: background-color 0.3s;
+    }
+
+    /* Scrollbar styling */
+    #tabs::-webkit-scrollbar, .modal-body::-webkit-scrollbar { height: 5px; width: 5px; }
+    #tabs::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background: #e1e4e8; }
+    #tabs::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background: #bdc1c6; border-radius: 3px; }
+    #tabs::-webkit-scrollbar-thumb:hover, .modal-body::-webkit-scrollbar-thumb:hover { background: #9ea3a8; }
+
+    /* --- Dark Theme Styles --- */
+    body.dark-theme { background-color: #1e1e1e; color: #f1f1f1; }
+    body.dark-theme header { background-color: #252526; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    body.dark-theme #historyBtn, body.dark-theme #bookmarksBtn, body.dark-theme #newTabBtn, body.dark-theme #openSettingsBtn {
+      background-color: #333333; color: #f1f1f1;
+    }
+    body.dark-theme #historyBtn:hover, body.dark-theme #bookmarksBtn:hover, body.dark-theme #newTabBtn:hover, body.dark-theme #openSettingsBtn:hover {
+      background-color: #444444;
+    }
+    body.dark-theme .modal-content { background-color: #2d2d2d; color: #f1f1f1; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    body.dark-theme .modal-header { border-bottom-color: #444; }
+    body.dark-theme .modal-header h2 { color: #f1f1f1; }
+    body.dark-theme .modal-close-btn { color: #aaa; }
+    body.dark-theme .modal-close-btn:hover { color: #fff; }
+    body.dark-theme .modal-footer { background-color: #252526; border-top-color: #444; }
+    body.dark-theme .modal-footer button { background-color: #a94442; } /* Default "delete" style */
+    body.dark-theme .modal-footer button:hover { background-color: #8c3330; }
+    body.dark-theme .modal-footer button.primary-action { background-color: #007acc; } /* Dark theme OK */
+    body.dark-theme .modal-footer button.primary-action:hover { background-color: #005a9e;}
+
+
+    body.dark-theme #settingsModal .setting-item label { color: #ccc; }
+    body.dark-theme #settingsModal .setting-item select { background-color: #3c3c3c; border-color: #555; color: #f1f1f1; }
+    body.dark-theme #settingsModal .setting-item select option { background-color: #3c3c3c; color: #f1f1f1; }
+    body.dark-theme #settingsModal .setting-item select:focus { border-color: #007acc; box-shadow: 0 0 0 1px #007acc; }
+    body.dark-theme #settingsModal .setting-item .small-settings-btn { background-color: #3e3e42; color: #ccc; border-color: #555; }
+    body.dark-theme #settingsModal .setting-item .small-settings-btn:hover { background-color: #4f4f53; }
+    body.dark-theme #currentHomepageDisplay { color: #bbb; }
+    
+    body.dark-theme #homepageModal .modal-body p { color: #ccc; }
+    body.dark-theme #homepageModal #homepageUrlInput { background-color: #3c3c3c; border-color: #555; color: #f1f1f1; }
+    body.dark-theme #homepageModal #homepageUrlInput:focus { border-color: #007acc; box-shadow: 0 0 0 1px #007acc; }
+
+
+    body.dark-theme #bookmarksList li { border-bottom-color: #444; }
+    body.dark-theme #bookmarksList li:hover { background-color: #3a3a3a; }
+    body.dark-theme #bookmarksList .bookmark-url { color: #888; }
+    body.dark-theme #bookmarksList .no-bookmarks { color: #888; }
+    body.dark-theme #bookmarksList .no-bookmarks:hover { background-color: transparent; }
+    
+    body.dark-theme .history-group h3 { color: #3b9cff; border-bottom-color: #4a4a4a; } 
+    body.dark-theme #historyListContainer li { border-bottom-color: #3a3a3a; }
+    body.dark-theme #historyListContainer li:hover { background-color: #3a3a3a; }
+    body.dark-theme #historyListContainer .history-item-url { color: #888; }
+    body.dark-theme #historyListContainer .history-item-time { color: #777; }
+    body.dark-theme #historyListContainer .no-history { color: #888; }
+    body.dark-theme #historyListContainer .no-history:hover { background-color: transparent; }
+
+    body.dark-theme #tabs::-webkit-scrollbar-track, body.dark-theme .modal-body::-webkit-scrollbar-track { background: #2d2d2d; }
+    body.dark-theme #tabs::-webkit-scrollbar-thumb, body.dark-theme .modal-body::-webkit-scrollbar-thumb { background: #555; }
+    body.dark-theme #tabs::-webkit-scrollbar-thumb:hover, body.dark-theme .modal-body::-webkit-scrollbar-thumb:hover { background: #666; }
+    body.dark-theme #tabs { background-color: #2d2d2d; box-shadow: inset 0 -1px 0 #444; }
+    body.dark-theme .tab-btn { background-color: #252526; border-color: #444; color: #ccc; }
+    body.dark-theme .tab-btn:hover { background-color: #333333; }
+    body.dark-theme .tab-btn.active { background-color: #1e1e1e; color: #fff; border-color: #444; border-bottom: 1px solid #1e1e1e; }
+    body.dark-theme .tab-close-button { color: #aaa; }
+    body.dark-theme .tab-close-button:hover { color: #fff; background-color: #444; }
+    body.dark-theme #tabContainer, body.dark-theme .tab-content { background-color: #1e1e1e; }
+    body.dark-theme .tab-toolbar { background-color: #252526; border-bottom: 1px solid #444; }
+    body.dark-theme .tab-toolbar .nav-button, body.dark-theme .tab-toolbar .go-button, body.dark-theme .tab-toolbar .bookmark-button { background-color: #3e3e42; border: 1px solid #555; color: #ccc; }
+    body.dark-theme .tab-toolbar .nav-button:hover, body.dark-theme .tab-toolbar .go-button:hover, body.dark-theme .tab-toolbar .bookmark-button:hover { background-color: #4f4f53; }
+    body.dark-theme .tab-toolbar input[type="text"] { background-color: #3c3c3c; border: 1px solid #555; color: #f1f1f1; }
+    body.dark-theme .tab-toolbar input[type="text"]:focus { border-color: #007acc; box-shadow: 0 0 0 1px #007acc; }
+    body.dark-theme footer { background-color: #252526; }
+
+    /* Media Query for Smaller Screens (Mobile Friendliness) */
+    @media (max-width: 600px) {
+        header h1 { font-size: 1rem; margin-right: 5px; }
+        #historyBtn, #bookmarksBtn, #newTabBtn, #openSettingsBtn { padding: 6px 8px; font-size: 0.8rem; margin-left: 5px; }
+        .tab-btn { min-width: 70px; max-width: 120px; font-size: 0.75rem; padding: 6px 7px; }
+        .tab-close-button { font-size: 0.9rem; }
+        .tab-toolbar { padding: 4px 5px; }
+        .tab-toolbar .nav-button, .tab-toolbar .go-button, .tab-toolbar .bookmark-button { padding: 3px 6px; font-size: 0.8rem; margin-right: 2px; }
+        .tab-toolbar .bookmark-button { font-size: 0.9rem; padding: 2px 5px; }
+        .tab-toolbar input[type="text"] { padding: 5px 7px; font-size: 0.8rem; }
+        .modal-content { width: 95%; max-height: 90vh; }
+        .modal-header { padding: 10px 15px; }
+        .modal-header h2 { font-size: 1.1rem; }
+        .modal-close-btn { font-size: 1.4rem; }
+        .modal-body { padding: 10px 15px; }
+        .modal-footer { padding: 10px 15px; }
+        .modal-footer button { font-size: 0.8rem; padding: 6px 10px; }
+        #bookmarksList .bookmark-title { font-size: 0.85rem; }
+        #bookmarksList .bookmark-url { font-size: 0.65rem; }
+        #bookmarksList .no-bookmarks { font-size: 0.85rem; }
+        .history-group h3 { font-size: 0.9rem; }
+        #historyListContainer .history-item-title { font-size: 0.8rem; }
+        #historyListContainer .history-item-url { font-size: 0.65rem; }
+        #historyListContainer .history-item-time { font-size: 0.6rem; }
+        #historyListContainer .no-history { font-size: 0.85rem; }
+        #currentHomepageDisplay { max-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Flash Browser</h1>
+    <div class="header-buttons">
+        <button id="historyBtn" title="History">📜</button>
+        <button id="bookmarksBtn" title="Bookmarks">🔖</button>
+        <button id="newTabBtn" title="New Tab">+</button>
+        <button id="openSettingsBtn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <div id="tabs"></div>
+  <div id="tabContainer"></div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button id="closeSettingsModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label for="themeSelector">Theme:</label>
+          <select id="themeSelector">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label for="searchEngineSelector">Default Search Engine:</label>
+          <select id="searchEngineSelector">
+            <option value="https://www.google.com/search?q=">Google</option>
+            <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+            <option value="https://www.bing.com/search?q=">Bing</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Default Homepage:</label>
+          <div style="display: flex; align-items: center;">
+            <span id="currentHomepageDisplay" title="Current default homepage"></span>
+            <button id="openHomepageModalBtn" class="small-settings-btn">Set Homepage</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Homepage Modal -->
+  <div id="homepageModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Set Default Homepage</h2>
+        <button id="closeHomepageModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9em; margin-bottom: 10px;">Enter the URL for your default homepage (e.g., https://www.google.com). Leave blank for the standard New Tab page.</p>
+        <input type="text" id="homepageUrlInput" placeholder="https://example.com or leave blank">
+      </div>
+      <div class="modal-footer">
+        <button id="saveHomepageBtn" class="primary-action">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookmarks Modal -->
+  <div id="bookmarksModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Bookmarks</h2>
+            <button id="closeBookmarksModalBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <ul id="bookmarksList"></ul>
+        </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="historyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Browsing History</h2>
+            <button id="closeHistoryModalBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body" id="historyListContainer"></div>
+        <div class="modal-footer">
+            <button id="clearAllHistoryBtn">Clear All Browsing History</button>
+        </div>
+    </div>
+  </div>
+
+  <footer>Developed by Haris</footer>
+
+  <script>
+    // --- Global Constants and Variables ---
+    const THEME_KEY = 'flashBrowserTheme';
+    const BOOKMARKS_KEY = 'flashBrowserBookmarks';
+    const HISTORY_KEY = 'flashBrowserGlobalHistory';
+    const SEARCH_ENGINE_KEY = 'flashBrowserSearchEngine';
+    const HOMEPAGE_KEY = 'flashBrowserHomepage';
+
+    const DEFAULT_NEW_TAB_URL = "https://www.google.com"; // Fallback if no homepage is set by user
+    const DEFAULT_SEARCH_ENGINE_URL = 'https://www.google.com/search?q=';
+
+    let currentTheme = 'light';
+    let currentSearchEngineUrl = DEFAULT_SEARCH_ENGINE_URL;
+    let defaultHomepageUrl = DEFAULT_NEW_TAB_URL; // Will be updated from localStorage
+
+    let tabCount = 0;
+    let currentTabId = null;
+    const historyByTab = {};
+    let bookmarks = [];
+    let globalHistory = [];
+
+    // --- DOM Elements ---
+    let settingsModalEl, openSettingsBtnEl, closeSettingsModalBtnEl, themeSelectorEl, searchEngineSelectorEl;
+    let homepageModalEl, openHomepageModalBtnEl, closeHomepageModalBtnEl, homepageUrlInputEl, saveHomepageBtnEl, currentHomepageDisplayEl;
+    let bookmarksBtnEl, bookmarksModalEl, closeBookmarksModalBtnEl, bookmarksListEl;
+    let historyBtnEl, historyModalEl, closeHistoryModalBtnEl, historyListContainerEl, clearAllHistoryBtnEl;
+
+    // --- Theme Management ---
+    function applyTheme(theme) {
+      document.body.classList.remove('light-theme', 'dark-theme');
+      document.body.classList.add(theme + '-theme');
+      if (themeSelectorEl) themeSelectorEl.value = theme;
+      currentTheme = theme;
+    }
+    function saveTheme(theme) {
+      try { localStorage.setItem(THEME_KEY, theme); }
+      catch (e) { console.error("Could not save theme to localStorage:", e); }
+    }
+    function loadTheme() {
+      let savedTheme = 'light';
+      try { savedTheme = localStorage.getItem(THEME_KEY) || 'light'; }
+      catch (e) { console.error("Could not load theme from localStorage:", e); }
+      applyTheme(savedTheme);
+    }
+
+    // --- Search Engine Setting ---
+    function loadSearchEngineSetting() {
+        try {
+            currentSearchEngineUrl = localStorage.getItem(SEARCH_ENGINE_KEY) || DEFAULT_SEARCH_ENGINE_URL;
+        } catch (e) {
+            console.error("Could not load search engine setting from localStorage:", e);
+            currentSearchEngineUrl = DEFAULT_SEARCH_ENGINE_URL;
+        }
+        if (searchEngineSelectorEl) {
+            searchEngineSelectorEl.value = currentSearchEngineUrl;
+        }
+    }
+    function saveSearchEngineSetting(url) {
+        try {
+            localStorage.setItem(SEARCH_ENGINE_KEY, url);
+            currentSearchEngineUrl = url;
+        } catch (e) {
+            console.error("Could not save search engine setting to localStorage:", e);
+        }
+    }
+
+    // --- Homepage Setting ---
+    function updateCurrentHomepageDisplay() {
+        if (currentHomepageDisplayEl) {
+            let displayVal = defaultHomepageUrl;
+            if (defaultHomepageUrl === "about:blank") {
+                displayVal = "New Tab Page (Default)";
+            }
+            currentHomepageDisplayEl.textContent = displayVal.length > 30 ? displayVal.substring(0, 27) + "..." : displayVal;
+            currentHomepageDisplayEl.title = defaultHomepageUrl; // Full URL on hover
+        }
+    }
+    function loadHomepageSetting() {
+        try {
+            const savedHomepage = localStorage.getItem(HOMEPAGE_KEY);
+            if (savedHomepage !== null) { // If there's a saved value (even "about:blank" or empty string which we treat as about:blank)
+                defaultHomepageUrl = savedHomepage;
+            } else { // No setting found, use the system default
+                defaultHomepageUrl = DEFAULT_NEW_TAB_URL;
+            }
+        } catch (e) {
+            console.error("Could not load homepage setting from localStorage:", e);
+            defaultHomepageUrl = DEFAULT_NEW_TAB_URL; // Fallback
+        }
+        updateCurrentHomepageDisplay();
+    }
+    function saveHomepageSetting() {
+        let newUrl = homepageUrlInputEl.value.trim();
+        let finalUrlToSave;
+
+        if (newUrl === '') {
+            finalUrlToSave = "about:blank"; // User wants the placeholder new tab page
+        } else if (/^(https?:\/\/)/i.test(newUrl)) {
+            finalUrlToSave = newUrl; // Already a full URL
+        } else if (newUrl.startsWith('about:') || newUrl.startsWith('data:') || newUrl.startsWith('blob:') || newUrl.startsWith('file:')) {
+            finalUrlToSave = newUrl; // Special protocol
+        } else if (newUrl.includes('.') && !newUrl.includes(' ') && !newUrl.startsWith('/')) { // Looks like a domain (e.g., example.com)
+            finalUrlToSave = 'https://' + newUrl;
+        } else {
+            alert("Invalid Homepage URL. Please enter a full URL (e.g., https://example.com), a special page (e.g. about:blank), or leave blank for the default new tab page.");
+            homepageUrlInputEl.focus();
+            return; // Don't save, don't close modal
+        }
+
+        try {
+            localStorage.setItem(HOMEPAGE_KEY, finalUrlToSave);
+            defaultHomepageUrl = finalUrlToSave;
+        } catch (e) {
+            console.error("Could not save homepage setting to localStorage:", e);
+            alert("Error saving homepage setting.");
+        }
+        
+        updateCurrentHomepageDisplay();
+        closeHomepageModal();
+    }
+    function showHomepageModal() {
+        if(homepageModalEl) {
+            homepageUrlInputEl.value = defaultHomepageUrl === "about:blank" ? "" : defaultHomepageUrl; // Show empty if it's about:blank
+            homepageModalEl.classList.add('active');
+            homepageUrlInputEl.focus();
+            homepageUrlInputEl.select();
+        }
+    }
+    function closeHomepageModal() {
+        if(homepageModalEl) homepageModalEl.classList.remove('active');
+    }
+
+
+    // --- Bookmark Management ---
+    function loadBookmarks() {
+        try {
+            const storedBookmarks = localStorage.getItem(BOOKMARKS_KEY);
+            bookmarks = storedBookmarks ? JSON.parse(storedBookmarks) : [];
+        } catch (e) { console.error("Error loading bookmarks:", e); bookmarks = []; }
+    }
+    function saveBookmarks() {
+        try { localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks)); }
+        catch (e) { console.error("Error saving bookmarks:", e); }
+    }
+    function isBookmarked(url) {
+        const normalized = normalizeUrlForBookmarkCheck(url); 
+        return bookmarks.some(bm => bm.url === normalized);
+    }
+    function renderBookmarksList() {
+        if (!bookmarksListEl) return;
+        bookmarksListEl.innerHTML = '';
+        if (bookmarks.length === 0) {
+            bookmarksListEl.innerHTML = '<li class="no-bookmarks">No bookmarks yet. Click the ☆ star in a tab to add one.</li>';
+            return;
+        }
+        bookmarks.forEach(bookmark => {
+            const listItem = document.createElement('li');
+            const textContainer = document.createElement('div');
+            textContainer.className = 'bookmark-title-url-container';
+            textContainer.onclick = () => {
+                if (currentTabId) loadInTab(currentTabId, bookmark.url);
+                else createTab(bookmark.url);
+                closeBookmarksModal();
+            };
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'bookmark-title';
+            titleSpan.textContent = bookmark.title;
+            const urlSpan = document.createElement('span');
+            urlSpan.className = 'bookmark-url';
+            urlSpan.textContent = bookmark.url;
+            textContainer.appendChild(titleSpan);
+            textContainer.appendChild(urlSpan);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'bookmark-delete-btn';
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.title = 'Delete bookmark';
+            deleteBtn.onclick = (e) => { e.stopPropagation(); removeBookmarkByURL(bookmark.url); };
+            listItem.appendChild(textContainer);
+            listItem.appendChild(deleteBtn);
+            bookmarksListEl.appendChild(listItem);
+        });
+    }
+    function updateBookmarkButtonState(tabId, url) {
+        const tabContent = document.getElementById(tabId);
+        if (!tabContent || !url) return; 
+        const bookmarkBtn = tabContent.querySelector('.bookmark-button');
+        if (bookmarkBtn) {
+            const normalizedUrlForCheck = normalizeUrlForBookmarkCheck(url);
+            if (isBookmarked(normalizedUrlForCheck)) {
+                bookmarkBtn.textContent = '★'; bookmarkBtn.title = 'Remove bookmark';
+            } else {
+                bookmarkBtn.textContent = '☆'; bookmarkBtn.title = 'Bookmark this page';
+            }
+        }
+    }
+    function toggleBookmark(tabId) {
+        const tabContent = document.getElementById(tabId);
+        if (!tabContent) return;
+        const urlInput = tabContent.querySelector('input[type="text"]');
+        const tabButton = document.getElementById(`${tabId}-btn`);
+        const titleSpanInTab = tabButton ? tabButton.querySelector('.tab-title') : null;
+        if (!urlInput || !titleSpanInTab) return;
+
+        const pageUrl = normalizeUrlForBookmarkCheck(urlInput.value);
+        const pageTitle = titleSpanInTab.title || titleSpanInTab.textContent || pageUrl;
+
+        if (!pageUrl || pageUrl.startsWith("about:blank") || pageUrl.includes("New Tab</h1>") || !pageTitle || pageTitle === "Loading..." || pageTitle === "Error" || pageTitle === "New Tab") {
+            alert("Cannot bookmark this page."); return;
+        }
+        if (isBookmarked(pageUrl)) bookmarks = bookmarks.filter(bm => bm.url !== pageUrl);
+        else bookmarks.push({ title: pageTitle, url: pageUrl });
+        saveBookmarks();
+        renderBookmarksList();
+        updateBookmarkButtonState(tabId, pageUrl);
+    }
+    function removeBookmarkByURL(urlToRemove) {
+        const normalizedUrlToRemove = normalizeUrlForBookmarkCheck(urlToRemove);
+        bookmarks = bookmarks.filter(bm => bm.url !== normalizedUrlToRemove);
+        saveBookmarks();
+        renderBookmarksList();
+        if (currentTabId) {
+            const activeTabContent = document.getElementById(currentTabId);
+            if (activeTabContent) {
+                const activeUrlInput = activeTabContent.querySelector('input[type="text"]');
+                if (activeUrlInput && normalizeUrlForBookmarkCheck(activeUrlInput.value) === normalizedUrlToRemove) {
+                    updateBookmarkButtonState(currentTabId, normalizedUrlToRemove);
+                }
+            }
+        }
+    }
+    function showBookmarksModal() {
+        if (bookmarksModalEl) {
+            renderBookmarksList();
+            bookmarksModalEl.classList.add('active');
+        }
+    }
+    function closeBookmarksModal() {
+        if (bookmarksModalEl) bookmarksModalEl.classList.remove('active');
+    }
+
+    // --- Global History Management ---
+    function loadGlobalHistory() {
+        try {
+            const storedHistory = localStorage.getItem(HISTORY_KEY);
+            globalHistory = storedHistory ? JSON.parse(storedHistory) : [];
+            globalHistory.sort((a, b) => b.timestamp - a.timestamp);
+        } catch (e) { console.error("Error loading global history:", e); globalHistory = []; }
+    }
+    function saveGlobalHistory() {
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(globalHistory)); }
+        catch (e) { console.error("Error saving global history:", e); }
+    }
+    function logToGlobalHistory(url, title, timestamp) {
+        if (!url || url.startsWith("about:blank") || url.includes("New Tab</h1>") || !title || title === "Loading..." || title === "Error" || title === "New Tab") {
+            return;
+        }
+        if (globalHistory.length > 0 && globalHistory[0].url === url && globalHistory[0].title === title && (timestamp - globalHistory[0].timestamp < 5000) ) {
+            globalHistory[0].timestamp = timestamp; 
+        } else {
+            globalHistory.unshift({ url, title, timestamp });
+        }
+        saveGlobalHistory();
+    }
+    function renderGlobalHistory() {
+        if (!historyListContainerEl) return;
+        historyListContainerEl.innerHTML = '';
+        if (globalHistory.length === 0) {
+            historyListContainerEl.innerHTML = '<div class="no-history">Your browsing history is empty.</div>';
+            return;
+        }
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const yesterdayStart = todayStart - (24 * 60 * 60 * 1000);
+        const sevenDaysAgoStart = todayStart - (7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgoStart = todayStart - (30 * 24 * 60 * 60 * 1000);
+
+        const groups = {
+            today: { title: "Today", items: [] }, yesterday: { title: "Yesterday", items: [] },
+            previous7Days: { title: "Previous 7 Days", items: [] }, previous30Days: { title: "Previous 30 Days", items: [] },
+            older: { title: "Older", items: [] }
+        };
+        globalHistory.forEach(item => {
+            if (item.timestamp >= todayStart) groups.today.items.push(item);
+            else if (item.timestamp >= yesterdayStart) groups.yesterday.items.push(item);
+            else if (item.timestamp >= sevenDaysAgoStart) groups.previous7Days.items.push(item);
+            else if (item.timestamp >= thirtyDaysAgoStart) groups.previous30Days.items.push(item);
+            else groups.older.items.push(item);
+        });
+        for (const groupKey in groups) {
+            const group = groups[groupKey];
+            if (group.items.length > 0) {
+                const groupDiv = document.createElement('div'); groupDiv.className = 'history-group';
+                const groupTitle = document.createElement('h3'); groupTitle.textContent = group.title;
+                groupDiv.appendChild(groupTitle); const itemList = document.createElement('ul');
+                group.items.forEach(item => {
+                    const listItem = document.createElement('li');
+                    const detailsDiv = document.createElement('div'); detailsDiv.className = 'history-item-details';
+                    detailsDiv.onclick = () => {
+                        if (currentTabId) loadInTab(currentTabId, item.url);
+                        else createTab(item.url);
+                        closeHistoryModal();
+                    };
+                    const titleSpan = document.createElement('span'); titleSpan.className = 'history-item-title'; titleSpan.textContent = item.title;
+                    const urlSpan = document.createElement('span'); urlSpan.className = 'history-item-url'; urlSpan.textContent = item.url;
+                    detailsDiv.appendChild(titleSpan); detailsDiv.appendChild(urlSpan);
+                    const timeSpan = document.createElement('span'); timeSpan.className = 'history-item-time';
+                    const itemDate = new Date(item.timestamp);
+                    timeSpan.textContent = itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const deleteBtn = document.createElement('button'); deleteBtn.className = 'history-item-delete-btn';
+                    deleteBtn.innerHTML = '&times;'; deleteBtn.title = 'Remove from history';
+                    deleteBtn.onclick = (e) => { e.stopPropagation(); deleteHistoryItem(item.timestamp); };
+                    listItem.appendChild(timeSpan); listItem.appendChild(detailsDiv); listItem.appendChild(deleteBtn);
+                    itemList.appendChild(listItem);
+                });
+                groupDiv.appendChild(itemList); historyListContainerEl.appendChild(groupDiv);
+            }
+        }
+    }
+    function deleteHistoryItem(timestamp) {
+        globalHistory = globalHistory.filter(item => item.timestamp !== timestamp);
+        saveGlobalHistory(); renderGlobalHistory();
+    }
+    function clearAllGlobalHistory() {
+        if (confirm("Are you sure you want to clear all browsing history? This cannot be undone.")) {
+            globalHistory = []; saveGlobalHistory(); renderGlobalHistory();
+        }
+    }
+    function showHistoryModal() {
+        if (historyModalEl) { renderGlobalHistory(); historyModalEl.classList.add('active'); }
+    }
+    function closeHistoryModal() {
+        if (historyModalEl) historyModalEl.classList.remove('active');
+    }
+
+    // --- URL Normalization ---
+    function normalizeUrl(inputUrl) {
+      inputUrl = String(inputUrl || '').trim();
+      if (!inputUrl) return null;
+      if (/^(data:|blob:|about:|file:)/i.test(inputUrl)) return inputUrl; 
+      if (/^(https?:\/\/)/i.test(inputUrl)) return inputUrl;
+      if (/^www\./i.test(inputUrl) || inputUrl.includes('.')) { 
+        const domainPattern = /^(([^:/?#]+):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
+        const match = inputUrl.match(domainPattern);
+        if (match && match[4] && match[4].includes('.')) { 
+            return 'https://' + inputUrl;
+        }
+      }
+      return currentSearchEngineUrl + encodeURIComponent(inputUrl);
+    }
+
+    function normalizeUrlForBookmarkCheck(inputUrl) {
+        inputUrl = String(inputUrl || '').trim();
+        if (!inputUrl) return null;
+        if (/^(https?:\/\/)/i.test(inputUrl)) return inputUrl;
+        if (/^www\./i.test(inputUrl) || inputUrl.includes('.')) {
+            const domainPattern = /^(([^:/?#]+):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
+            const match = inputUrl.match(domainPattern);
+            if (match && match[4] && match[4].includes('.')) {
+                return 'https://' + inputUrl;
+            }
+        }
+        return inputUrl;
+    }
+
+
+    // --- Tab Management ---
+    function createTab(initialUrlOverride = '') {
+      tabCount++;
+      const tabId = `tab${tabCount}`;
+      historyByTab[tabId] = { urls: [], currentIndex: -1 };
+
+      const tabButton = document.createElement('button');
+      tabButton.className = 'tab-btn';
+      tabButton.id = `${tabId}-btn`;
+      tabButton.onclick = (event) => {
+        if (event.target.closest('.tab-close-button') === null) activateTab(tabId);
+      };
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'tab-title';
+      titleSpan.textContent = `New Tab`; // Placeholder, will be updated
+      tabButton.appendChild(titleSpan);
+      const closeButton = document.createElement('button');
+      closeButton.className = 'tab-close-button';
+      closeButton.innerHTML = '&times;';
+      closeButton.title = 'Close Tab';
+      closeButton.onclick = (e) => { e.stopPropagation(); closeTab(tabId); };
+      tabButton.appendChild(closeButton);
+      document.getElementById('tabs').appendChild(tabButton);
+
+      const tabContent = document.createElement('div');
+      tabContent.className = 'tab-content';
+      tabContent.id = tabId;
+      const toolbar = document.createElement('div');
+      toolbar.className = 'tab-toolbar';
+      const backBtn = document.createElement('button');
+      backBtn.className = 'nav-button'; backBtn.innerHTML = '←'; backBtn.title = 'Back'; backBtn.disabled = true;
+      backBtn.onclick = () => navigateHistory(tabId, 'back');
+      const forwardBtn = document.createElement('button');
+      forwardBtn.className = 'nav-button'; forwardBtn.innerHTML = '→'; forwardBtn.title = 'Forward'; forwardBtn.disabled = true;
+      forwardBtn.onclick = () => navigateHistory(tabId, 'forward');
+      const refreshBtn = document.createElement('button');
+      refreshBtn.className = 'nav-button'; refreshBtn.innerHTML = '↻'; refreshBtn.title = 'Refresh';
+      refreshBtn.onclick = () => {
+        const currentIframe = document.querySelector(`#${tabId} iframe`);
+        const currentUrlInInput = document.querySelector(`#${tabId} input[type="text"]`).value;
+        if (currentUrlInInput && currentUrlInInput !== "about:blank" && !(currentIframe && currentIframe.srcdoc && currentIframe.srcdoc.includes("New Tab</h1>"))) {
+             loadInTab(tabId, currentUrlInInput, false); 
+        } else {
+            if (currentIframe) {
+                const tabHistory = historyByTab[tabId];
+                const initialTabUrl = tabHistory && tabHistory.urls.length > 0 ? tabHistory.urls[tabHistory.currentIndex] : defaultHomepageUrl;
+                if (initialTabUrl && initialTabUrl !== "about:blank") {
+                     loadInTab(tabId, initialTabUrl, false);
+                } else {
+                     setNewTabPlaceholderContent(currentIframe, titleSpan); 
+                }
+            }
+        }
+      };
+      const bookmarkBtn = document.createElement('button');
+      bookmarkBtn.className = 'bookmark-button';
+      bookmarkBtn.innerHTML = '☆';
+      bookmarkBtn.title = 'Bookmark this page';
+      bookmarkBtn.onclick = () => toggleBookmark(tabId);
+      const urlInput = document.createElement('input');
+      urlInput.type = 'text';
+      urlInput.placeholder = 'Enter URL or search';
+      urlInput.onkeydown = e => { if (e.key === 'Enter') loadInTab(tabId, urlInput.value); };
+      const goBtn = document.createElement('button');
+      goBtn.className = 'go-button'; goBtn.textContent = 'Go';
+      goBtn.onclick = () => loadInTab(tabId, urlInput.value);
+      toolbar.append(backBtn, forwardBtn, refreshBtn, bookmarkBtn, urlInput, goBtn);
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'tab-iframe';
+      iframe.sandbox = "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation";
+      tabContent.append(toolbar, iframe);
+      document.getElementById('tabContainer').appendChild(tabContent);
+
+      activateTab(tabId);
+
+      const urlForNewTab = (initialUrlOverride && initialUrlOverride.trim() !== '') 
+                         ? initialUrlOverride 
+                         : defaultHomepageUrl;
+
+      if (urlForNewTab && urlForNewTab !== "about:blank") {
+        const normalizedUrlToLoad = normalizeUrl(urlForNewTab);
+        urlInput.value = normalizedUrlToLoad;
+        loadInTab(tabId, normalizedUrlToLoad);
+      } else {
+        setNewTabPlaceholderContent(iframe, titleSpan);
+        updateBookmarkButtonState(tabId, ''); 
+      }
+      updateNavButtons(tabId);
+    }
+    function setNewTabPlaceholderContent(iframeElement, titleSpanElement) {
+        if (iframeElement) {
+            iframeElement.srcdoc = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:80%; font-family: Arial, sans-serif; color: ${currentTheme === 'dark' ? '#ccc' : '#555'};"><h1 style="font-weight:lighter;font-size:2em;">New Tab</h1></div>`;
+        }
+        if (titleSpanElement) {
+            titleSpanElement.textContent = 'New Tab';
+            titleSpanElement.title = 'New Tab';
+        }
+        const tabContent = iframeElement.closest('.tab-content');
+        if (tabContent) {
+            const urlInput = tabContent.querySelector('input[type="text"]');
+            if (urlInput) urlInput.value = ''; // Clear address bar for placeholder
+        }
+    }
+    function updateNavButtons(tabId) {
+        const tabHistory = historyByTab[tabId];
+        const tabContentElement = document.getElementById(tabId);
+        if (!tabContentElement) return;
+        const backBtn = tabContentElement.querySelector('.nav-button[title="Back"]');
+        const forwardBtn = tabContentElement.querySelector('.nav-button[title="Forward"]');
+        if (tabHistory && backBtn && forwardBtn) {
+            backBtn.disabled = tabHistory.currentIndex <= 0;
+            forwardBtn.disabled = tabHistory.currentIndex >= tabHistory.urls.length - 1;
+        } else if (backBtn && forwardBtn) {
+            backBtn.disabled = true; forwardBtn.disabled = true;
+        }
+    }
+    function navigateHistory(tabId, direction) {
+        const tabHistory = historyByTab[tabId];
+        if (!tabHistory) return;
+        let newIndex = tabHistory.currentIndex;
+        if (direction === 'back' && tabHistory.currentIndex > 0) newIndex--;
+        else if (direction === 'forward' && tabHistory.currentIndex < tabHistory.urls.length - 1) newIndex++;
+        if (newIndex !== tabHistory.currentIndex && tabHistory.urls[newIndex]) {
+            tabHistory.currentIndex = newIndex;
+            const urlToLoad = tabHistory.urls[newIndex];
+            loadInTab(tabId, urlToLoad, false); 
+            document.querySelector(`#${tabId} input[type="text"]`).value = urlToLoad;
+        }
+        updateNavButtons(tabId);
+    }
+    function activateTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      const button = document.getElementById(`${tabId}-btn`);
+      const content = document.getElementById(tabId);
+      if (button && content) {
+        button.classList.add('active'); content.classList.add('active'); currentTabId = tabId;
+        button.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        const urlInput = content.querySelector('input[type="text"]');
+        if (urlInput) {
+            const iframe = content.querySelector('iframe.tab-iframe');
+            const isNewTabPlaceholder = iframe && iframe.srcdoc && iframe.srcdoc.includes("<h1 style=\"font-weight:lighter;font-size:2em;\">New Tab</h1>");
+            if (isNewTabPlaceholder || !urlInput.value) setTimeout(() => urlInput.focus(), 50);
+            updateBookmarkButtonState(tabId, urlInput.value || '');
+        }
+      }
+    }
+    function closeTab(tabId) {
+        const tabButtonToClose = document.getElementById(`${tabId}-btn`);
+        const tabContentToClose = document.getElementById(tabId);
+        if (!tabButtonToClose || !tabContentToClose) return;
+        const parentTabs = document.getElementById('tabs');
+        const allTabButtons = Array.from(parentTabs.children);
+        const closedTabIndex = allTabButtons.indexOf(tabButtonToClose);
+        tabButtonToClose.remove(); tabContentToClose.remove(); delete historyByTab[tabId];
+        if (currentTabId === tabId) currentTabId = null;
+        const remainingButtons = Array.from(parentTabs.children);
+        if (tabButtonToClose.classList.contains('active') && remainingButtons.length > 0) {
+            let newIndexToActivate = closedTabIndex;
+            if (newIndexToActivate >= remainingButtons.length) newIndexToActivate = remainingButtons.length - 1;
+            if (newIndexToActivate < 0) newIndexToActivate = 0; 
+            if (remainingButtons[newIndexToActivate]) {
+                 activateTab(remainingButtons[newIndexToActivate].id.replace('-btn', ''));
+            } else if (remainingButtons.length > 0) { 
+                 activateTab(remainingButtons[0].id.replace('-btn', ''));
+            }
+        } else if (remainingButtons.length === 0) {
+            currentTabId = null; createTab(); // Create tab using default homepage
+        }
+    }
+    async function loadInTab(tabId, urlInput, addToHistoryByTab = true) {
+      const normalizedUrl = normalizeUrl(urlInput);
+      if (!normalizedUrl) {
+          console.warn("Normalization resulted in null URL for input:", urlInput);
+          return;
+      }
+      const tabContentElement = document.getElementById(tabId);
+      if (!tabContentElement) return;
+      const iframe = tabContentElement.querySelector('iframe.tab-iframe');
+      const inputField = tabContentElement.querySelector('input[type="text"]');
+      const titleSpanOnTabButton = document.querySelector(`#${tabId}-btn .tab-title`);
+      if (!iframe || !inputField || !titleSpanOnTabButton) return;
+
+      inputField.disabled = true; inputField.value = normalizedUrl;
+      titleSpanOnTabButton.textContent = 'Loading...'; titleSpanOnTabButton.title = 'Loading...';
+      iframe.srcdoc = '';
+      iframe.srcdoc = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:80%; padding:20px; font-family: Arial, sans-serif; text-align: center; color: ${currentTheme === 'dark' ? '#ccc' : '#333'};">Loading <span style="font-size:1.5em;">⏳</span><br><small style="word-break:break-all;">${normalizedUrl}</small></div>`;
+      updateBookmarkButtonState(tabId, normalizedUrl);
+
+      if (addToHistoryByTab) {
+        const tabHistory = historyByTab[tabId];
+        if (tabHistory) {
+            if (tabHistory.currentIndex < tabHistory.urls.length - 1) {
+                tabHistory.urls = tabHistory.urls.slice(0, tabHistory.currentIndex + 1);
+            }
+            if (tabHistory.urls.length === 0 || tabHistory.urls[tabHistory.urls.length -1] !== normalizedUrl) {
+                tabHistory.urls.push(normalizedUrl);
+            }
+            tabHistory.currentIndex = tabHistory.urls.length - 1;
+        }
+      }
+      updateNavButtons(tabId);
+
+      try {
+        if (typeof puter === 'undefined' || !puter.net || !puter.net.fetch) {
+            throw new Error("Puter.js library not available or not loaded correctly.");
+        }
+        const response = await puter.net.fetch(normalizedUrl);
+        const bodyText = await response.text();
+        const finalHTML = injectLinkHandler(bodyText, normalizedUrl, tabId);
+        iframe.srcdoc = finalHTML;
+        
+        setTimeout(() => {
+            let pageTitle = "Page";
+            try {
+                const tempDoc = new DOMParser().parseFromString(finalHTML, 'text/html');
+                const titleTag = tempDoc.querySelector('title');
+                if (titleTag && titleTag.textContent.trim()) {
+                    pageTitle = titleTag.textContent.trim();
+                } else {
+                    try {
+                        const urlObj = new URL(normalizedUrl);
+                        pageTitle = urlObj.hostname.replace(/^www\./, '');
+                        if (!pageTitle || pageTitle.toLowerCase() === "search" || pageTitle.length === 0) {
+                             if (normalizedUrl.includes('google.com/search') || normalizedUrl.includes('bing.com/search') || normalizedUrl.includes('duckduckgo.com/')) {
+                                const queryParams = urlObj.searchParams; const q = queryParams.get('q');
+                                if (q) pageTitle = `Search: ${q.substring(0,15)}${q.length > 15 ? '...' : ''}`;
+                                else pageTitle = urlObj.hostname.replace(/^www\./, '') || "Untitled Page";
+                            } else pageTitle = urlObj.hostname.replace(/^www\./, '') || "Untitled Page";
+                        }
+                    } catch (urlError) { 
+                        pageTitle = normalizedUrl === "about:blank" ? "New Tab" : "Untitled Page"; // Changed "Blank Page" to "New Tab"
+                    }
+                }
+            } catch (e) {
+                console.warn("Error generating page title:", e);
+                try { pageTitle = new URL(normalizedUrl).hostname.replace(/^www\./, '') || "Page"; }
+                catch { pageTitle = "Page"; }
+            }
+            titleSpanOnTabButton.textContent = pageTitle.length > 20 ? pageTitle.substring(0, 18) + '...' : pageTitle;
+            titleSpanOnTabButton.title = pageTitle; 
+            logToGlobalHistory(normalizedUrl, pageTitle, Date.now());
+        }, 150); 
+      } catch (err) {
+        iframe.srcdoc = `<div style="padding:20px;color:red; font-family: Arial, sans-serif; text-align: center;">Error loading page: ${err.message}<br><small style="word-break:break-all;">${normalizedUrl}</small></div>`;
+        titleSpanOnTabButton.textContent = 'Error'; titleSpanOnTabButton.title = 'Error';
+        console.error(`Puter.net.fetch error for "${normalizedUrl}":`, err);
+      } finally {
+        inputField.disabled = false;
+        updateBookmarkButtonState(tabId, inputField.value);
+      }
+    }
+    function injectLinkHandler(html, baseUrl, tabIdForInjection) {
+      const parser = new DOMParser(); const doc = parser.parseFromString(html, 'text/html');
+      let base = doc.querySelector('base');
+      if (!base) {
+        base = doc.createElement('base');
+        if (doc.head) doc.head.prepend(base);
+        else { const headEl = doc.createElement('head'); doc.documentElement.prepend(headEl); headEl.prepend(base); }
+      }
+      base.href = baseUrl; 
+      const script = doc.createElement('script');
+      script.textContent = `
+        document.addEventListener('click', function(event) {
+          const link = event.target.closest('a');
+          if (link && link.href && link.href.trim() !== '' && !link.href.toLowerCase().startsWith('javascript:')) {
+            event.preventDefault(); let absoluteUrl;
+            try { 
+                absoluteUrl = new URL(link.getAttribute('href'), document.baseURI).href; 
+            }
+            catch (e) { console.warn('Invalid link URL:', link.getAttribute('href'), e); return; }
+
+            if (link.target === '_blank' || event.metaKey || event.ctrlKey) {
+              parent.postMessage({ type: 'newTabNavigate', url: absoluteUrl }, '*');
+            } else {
+              parent.postMessage({ type: 'navigate', url: absoluteUrl, tabId: '${tabIdForInjection}' }, '*');
+            }
+          }
+        }, true); 
+        document.addEventListener('submit', function(event) {
+          const form = event.target.closest('form');
+          if (form) {
+            event.preventDefault(); const formData = new FormData(form); const params = new URLSearchParams(formData);
+            let targetUrl;
+            try {
+                const formAction = form.getAttribute('action');
+                targetUrl = new URL(formAction || '', document.baseURI);
+            }
+            catch (e) { console.warn('Invalid form action:', form.getAttribute('action'), e); return; }
+            
+            console.warn("Form submission method (e.g., POST) is converted to GET for this browser prototype.");
+            targetUrl.search = params.toString(); 
+
+            parent.postMessage({ type: 'navigate', url: targetUrl.href, tabId: '${tabIdForInjection}' }, '*');
+          }
+        }, true); 
+      `;
+      if(doc.body) doc.body.appendChild(script);
+      else if (doc.head) doc.head.appendChild(script);
+      else if (doc.documentElement) doc.documentElement.appendChild(script); 
+      
+      return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    }
+
+    // --- Event Listeners ---
+    window.addEventListener('message', e => {
+      if (e.origin === "null" && e.data && e.data.type) { 
+        const { tabId, url } = e.data;
+        if (e.data.type === 'navigate' && tabId && url && document.getElementById(tabId)) {
+          activateTab(tabId);
+          loadInTab(tabId, url); 
+          const inputField = document.querySelector(`#${tabId} input[type="text"]`);
+          if (inputField) inputField.value = normalizeUrl(url); 
+        } else if (e.data.type === 'newTabNavigate' && url) {
+          createTab(url); 
+        }
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        settingsModalEl = document.getElementById('settingsModal');
+        openSettingsBtnEl = document.getElementById('openSettingsBtn');
+        closeSettingsModalBtnEl = document.getElementById('closeSettingsModalBtn');
+        themeSelectorEl = document.getElementById('themeSelector');
+        searchEngineSelectorEl = document.getElementById('searchEngineSelector'); 
+
+        homepageModalEl = document.getElementById('homepageModal');
+        openHomepageModalBtnEl = document.getElementById('openHomepageModalBtn');
+        closeHomepageModalBtnEl = document.getElementById('closeHomepageModalBtn');
+        homepageUrlInputEl = document.getElementById('homepageUrlInput');
+        saveHomepageBtnEl = document.getElementById('saveHomepageBtn');
+        currentHomepageDisplayEl = document.getElementById('currentHomepageDisplay');
+
+        bookmarksBtnEl = document.getElementById('bookmarksBtn');
+        bookmarksModalEl = document.getElementById('bookmarksModal');
+        closeBookmarksModalBtnEl = document.getElementById('closeBookmarksModalBtn');
+        bookmarksListEl = document.getElementById('bookmarksList');
+        historyBtnEl = document.getElementById('historyBtn');
+        historyModalEl = document.getElementById('historyModal');
+        closeHistoryModalBtnEl = document.getElementById('closeHistoryModalBtn');
+        historyListContainerEl = document.getElementById('historyListContainer');
+        clearAllHistoryBtnEl = document.getElementById('clearAllHistoryBtn');
+
+        loadTheme(); 
+        loadSearchEngineSetting(); 
+        loadHomepageSetting(); // Load homepage preference
+        loadBookmarks(); 
+        loadGlobalHistory();
+
+        if (openSettingsBtnEl) openSettingsBtnEl.onclick = () => { 
+            if (themeSelectorEl) themeSelectorEl.value = currentTheme; 
+            if (searchEngineSelectorEl) searchEngineSelectorEl.value = currentSearchEngineUrl; 
+            updateCurrentHomepageDisplay(); // Make sure display is current when opening settings
+            settingsModalEl.classList.add('active'); 
+        };
+        if (closeSettingsModalBtnEl) closeSettingsModalBtnEl.onclick = () => settingsModalEl.classList.remove('active');
+        if (settingsModalEl) settingsModalEl.onclick = (e) => { if (e.target === settingsModalEl) settingsModalEl.classList.remove('active'); };
+        
+        // Homepage Modal Listeners
+        if (openHomepageModalBtnEl) openHomepageModalBtnEl.onclick = showHomepageModal;
+        if (closeHomepageModalBtnEl) closeHomepageModalBtnEl.onclick = closeHomepageModal;
+        if (saveHomepageBtnEl) saveHomepageBtnEl.onclick = saveHomepageSetting;
+        if (homepageModalEl) homepageModalEl.onclick = (e) => { if (e.target === homepageModalEl) closeHomepageModal(); };
+        if (homepageUrlInputEl) homepageUrlInputEl.onkeydown = (e) => { if (e.key === 'Enter') saveHomepageSetting(); };
+
+
+        if (bookmarksBtnEl) bookmarksBtnEl.onclick = showBookmarksModal;
+        if (closeBookmarksModalBtnEl) closeBookmarksModalBtnEl.onclick = closeBookmarksModal;
+        if (bookmarksModalEl) bookmarksModalEl.onclick = (e) => { if (e.target === bookmarksModalEl) closeBookmarksModal(); };
+
+        if (historyBtnEl) historyBtnEl.onclick = showHistoryModal;
+        if (closeHistoryModalBtnEl) closeHistoryModalBtnEl.onclick = closeHistoryModal;
+        if (historyModalEl) historyModalEl.onclick = (e) => { if (e.target === historyModalEl) closeHistoryModal(); };
+        if (clearAllHistoryBtnEl) clearAllHistoryBtnEl.onclick = clearAllGlobalHistory;
+        
+        if (themeSelectorEl) {
+            themeSelectorEl.onchange = (event) => {
+                const newTheme = event.target.value; applyTheme(newTheme); saveTheme(newTheme);
+                if (currentTabId) {
+                    const activeTabContent = document.getElementById(currentTabId);
+                    if (activeTabContent) {
+                        const iframe = activeTabContent.querySelector('iframe.tab-iframe');
+                        const titleSpan = document.querySelector(`#${currentTabId}-btn .tab-title`);
+                        if (iframe && iframe.srcdoc && iframe.srcdoc.includes("<h1 style=\"font-weight:lighter;font-size:2em;\">New Tab</h1>")) {
+                             setNewTabPlaceholderContent(iframe, titleSpan); 
+                        }
+                    }
+                }
+            };
+        }
+        if (searchEngineSelectorEl) {
+            searchEngineSelectorEl.onchange = (event) => {
+                saveSearchEngineSetting(event.target.value);
+            };
+        }
+
+        const newTabGlobalBtn = document.getElementById('newTabBtn');
+        if (newTabGlobalBtn) newTabGlobalBtn.onclick = () => createTab(); // No URL, uses defaultHomepageUrl
+        
+        createTab(); // Create initial tab using default homepage
+    });
+  </script>
+</body>
+</html>
