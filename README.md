@@ -15,4 +15,7 @@
 - 👨‍💻 **Developed by Haris** – Built with passion for the Puter ecosystem.
 
 🧭 Whether you're exploring the web, testing ideas, or just want a fast, easy-to-use browser – **Flash Browser** gives you the ultimate freedom inside **Puter**.
+
+**Flash Browser Screenshot**
+
 ![Flash Browser Screenshot.png](https://github.com/Haris16-code/Flash-Browser/blob/main/Flash%20Browser%20Screenshot.png?raw=true)
