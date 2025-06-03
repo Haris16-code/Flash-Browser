@@ -1,6 +1,6 @@
 # Flash Browser
 
-![Flash Browser Screenshot](Flash Browser Screenshot.png)
+([Flash Browser Screenshot.png](https://github.com/Haris16-code/Flash-Browser/blob/main/Flash%20Browser%20Screenshot.png?raw=true))
 
 **Flash Browser** is made in pure HTML CSS AND JAVASCRIPT so it run on any browser directly without any external dependency.
 
